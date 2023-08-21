@@ -39,16 +39,24 @@ public class LottieView: NSObject, FlutterPlatformView, FlutterStreamHandler {
             let filePath = argsDict["filePath"] as? String ?? nil
             let json = argsDict["json"] as? String ?? nil
             let loop = argsDict["loop"] as? Bool ?? false
+            let repeatCount = argsDict["repeatCount"] as? Int ?? 0
             let reverse = argsDict["reverse"] as? Bool ?? false
             let autoPlay = argsDict["autoPlay"] as? Bool ?? false
 
             animationView.contentMode = .scaleAspectFit
 
             if loop {
-                animationView.loopMode = LottieLoopMode.loop
-            }
-            if reverse {
-                animationView.loopMode = LottieLoopMode.autoReverse
+                if reverse {
+                    animationView.loopMode = LottieLoopMode.autoReverse
+                } else {
+                    animationView.loopMode = LottieLoopMode.loop
+                }
+            } else {
+                if reverse {
+                    animationView.loopMode = LottieLoopMode.repeatBackwards(Float(repeatCount))
+                } else {
+                    animationView.loopMode = LottieLoopMode.repeat(Float(repeatCount))
+                }
             }
 
             if url != nil {

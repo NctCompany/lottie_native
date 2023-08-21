@@ -16,6 +16,7 @@ class LottieView extends StatefulWidget {
     required this.url,
     Key? key,
     this.loop = true,
+    this.repeatCount = 0,
     this.autoPlay = true,
     this.reverse = false,
   })  : filePath = null,
@@ -27,6 +28,7 @@ class LottieView extends StatefulWidget {
     this.onViewCreated,
     required this.filePath,
     this.loop = true,
+    this.repeatCount = 0,
     this.autoPlay = true,
     this.reverse = false,
   })  : url = null,
@@ -38,6 +40,7 @@ class LottieView extends StatefulWidget {
     this.onViewCreated,
     required this.json,
     this.loop = true,
+    this.repeatCount = 0,
     this.autoPlay = true,
     this.reverse = false,
   })  : url = null,
@@ -50,6 +53,7 @@ class LottieView extends StatefulWidget {
   final String? url;
   final String? filePath;
   final String? json;
+  final int repeatCount;
 
   @override
   _LottieViewState createState() => _LottieViewState();
@@ -67,6 +71,7 @@ class _LottieViewState extends State<LottieView> {
       "loop": widget.loop,
       "reverse": widget.reverse,
       "autoPlay": widget.autoPlay,
+      "repeatCount": widget.repeatCount,
     };
 
     switch (defaultTargetPlatform) {

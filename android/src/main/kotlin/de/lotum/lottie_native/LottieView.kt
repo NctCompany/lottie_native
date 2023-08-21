@@ -57,9 +57,14 @@ class LottieView internal constructor(
             animationView.setAnimationFromJson(args["json"] as String, null)
         }
         val loop: Boolean = if (args["loop"] != null) args["loop"] as Boolean else false
+        var repeatCount: Int = if (args["repeatCount"] != null) args["repeatCount"] as Int else 0
+        // android端 repeatCount 是指重复执行的次数，总执行次数等于 repeatCount + 1
+        // 但是 ios 端 repeatCount 代表了总执行次数，但是当 repeatCount = 0 时，执行 1 次
+        // 这里为了双端统一且易于理解（通常情况下开发者使用这个参数的本意就是想让动画执行repeatCount次）
+        repeatCount = if (repeatCount >= 1) repeatCount - 1 else repeatCount
         val reverse: Boolean = if (args["reverse"] != null) args["reverse"] as Boolean else false
         val autoPlay: Boolean = if (args["autoPlay"] != null) args["autoPlay"] as Boolean else false
-        animationView.repeatCount = if (loop) -1 else 0
+        animationView.repeatCount = if (loop) -1 else repeatCount
         maxFrame = animationView.maxFrame
         if (reverse) {
             animationView.repeatMode = LottieDrawable.REVERSE
@@ -78,6 +83,7 @@ class LottieView internal constructor(
 
     override fun dispose() {
         animationView.cancelAnimation()
+        animationView.removeAllAnimatorListeners()
         channel.setMethodCallHandler(null)
         onPlaybackFinishedEventChannel.setStreamHandler(null)
     }
@@ -179,10 +185,12 @@ class LottieView internal constructor(
     override fun onAnimationStart(animation: Animator) {}
 
     override fun onAnimationEnd(animation: Animator) {
+        android.util.Log.i("wpeng", "onAnimationEnd")
         onPlaybackFinishedEventSink?.success(true)
     }
 
     override fun onAnimationCancel(animation: Animator) {
+        android.util.Log.i("wpeng", "onAnimationCancel")
         onPlaybackFinishedEventSink?.success(false)
     }
 
