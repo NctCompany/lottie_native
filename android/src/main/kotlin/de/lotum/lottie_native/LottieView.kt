@@ -23,16 +23,18 @@ import io.flutter.plugin.platform.PlatformView
 import kotlin.math.roundToInt
 
 class LottieView internal constructor(
-        context: Context,
-        id: Int,
-        args: Any,
-        binaryMessenger: BinaryMessenger,
+    context: Context,
+    id: Int,
+    args: Any,
+    binaryMessenger: BinaryMessenger,
 ) : PlatformView, MethodCallHandler, EventChannel.StreamHandler, AnimatorListener {
     private val animationView: LottieAnimationView = LottieAnimationView(context)
     private val channel = MethodChannel(binaryMessenger, "de.lotum/lottie_native_$id")
-    private val onPlaybackFinishedEventChannel = EventChannel(binaryMessenger, "de.lotum/lottie_native_stream_play_finished_$id")
+    private val onPlaybackFinishedEventChannel =
+        EventChannel(binaryMessenger, "de.lotum/lottie_native_stream_play_finished_$id")
     private var onPlaybackFinishedEventSink: EventSink? = null
     private var maxFrame = 0f
+    private var state = 0;
 
     init {
         animationView.scaleType = ImageView.ScaleType.CENTER_INSIDE
@@ -82,8 +84,11 @@ class LottieView internal constructor(
     }
 
     override fun dispose() {
-        animationView.cancelAnimation()
+        if (animationView.isAnimating) {
+            animationView.cancelAnimation()
+        }
         animationView.removeAllAnimatorListeners()
+        onPlaybackFinishedEventSink?.endOfStream()
         channel.setMethodCallHandler(null)
         onPlaybackFinishedEventChannel.setStreamHandler(null)
     }
@@ -97,10 +102,12 @@ class LottieView internal constructor(
                 animationView.playAnimation()
                 result.success(null)
             }
+
             "resume" -> {
                 animationView.resumeAnimation()
                 result.success(null)
             }
+
             "playWithProgress" -> {
                 if (args["fromProgress"] != null) {
                     val fromProgress = (args["fromProgress"] as Double).toFloat()
@@ -111,6 +118,7 @@ class LottieView internal constructor(
                 animationView.playAnimation()
                 result.success(null)
             }
+
             "playWithFrames" -> {
                 if (args["fromFrame"] != null) {
                     val fromFrame = args["fromFrame"] as Int
@@ -121,6 +129,7 @@ class LottieView internal constructor(
                 animationView.playAnimation()
                 result.success(null)
             }
+
             "stop" -> {
                 animationView.cancelAnimation()
                 animationView.progress = 0.0f
@@ -129,19 +138,23 @@ class LottieView internal constructor(
                 animationView.repeatMode = mode
                 result.success(null)
             }
+
             "pause" -> {
                 animationView.pauseAnimation()
                 result.success(null)
             }
+
             "setAnimationSpeed" -> {
                 animationView.speed = (args["speed"] as Double).toFloat()
                 result.success(null)
             }
+
             "setLoopAnimation" -> {
                 val loop = if (args["loop"] != null) args["loop"] as Boolean else false
                 animationView.repeatCount = if (loop) -1 else 0
                 result.success(null)
             }
+
             "setAutoReverseAnimation" -> {
                 val reverse = args["reverse"] as Boolean
                 if (reverse) {
@@ -151,14 +164,17 @@ class LottieView internal constructor(
                 }
                 result.success(null)
             }
+
             "setAnimationProgress" -> {
                 animationView.progress = (args["progress"] as Double).toFloat()
                 result.success(null)
             }
+
             "setProgressWithFrame" -> {
                 animationView.frame = args["progress"] as Int
                 result.success(null)
             }
+
             "isAnimationPlaying" -> result.success(animationView.isAnimating)
             "getAnimationDuration" -> result.success(animationView.duration.toDouble())
             "getAnimationProgress" -> result.success(animationView.progress.toDouble())
@@ -172,6 +188,7 @@ class LottieView internal constructor(
                 setValue(type, value, keyPath)
                 result.success(null)
             }
+
             else -> result.notImplemented()
         }
     }
@@ -182,28 +199,34 @@ class LottieView internal constructor(
 
     override fun onCancel(o: Any?) {}
 
-    override fun onAnimationStart(animation: Animator) {}
+    override fun onAnimationStart(animation: Animator) {
+        state = 1
+    }
 
     override fun onAnimationEnd(animation: Animator) {
-        android.util.Log.i("wpeng", "onAnimationEnd")
-        onPlaybackFinishedEventSink?.success(true)
+        if (state != 2) {
+            onPlaybackFinishedEventSink?.success(true)
+        }
+        state = 3
     }
 
     override fun onAnimationCancel(animation: Animator) {
-        android.util.Log.i("wpeng", "onAnimationCancel")
         onPlaybackFinishedEventSink?.success(false)
+        state = 2
     }
 
     override fun onAnimationRepeat(animation: Animator) {}
 
     private fun setValue(type: String, value: String, keyPath: String) {
-        val keyPathSegments = keyPath.split("\\.".toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray()
+        val keyPathSegments =
+            keyPath.split("\\.".toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray()
         val parsedKeyPath = KeyPath(*keyPathSegments)
         when (type) {
             "LOTColorValue" -> {
                 val callbackValue = LottieValueCallback(convertColor(value))
                 animationView.addValueCallback(parsedKeyPath, LottieProperty.COLOR, callbackValue)
             }
+
             "LOTOpacityValue" -> {
                 val opacity = value.toFloat() * 100
                 val callbackValue = LottieValueCallback(opacity.roundToInt())
@@ -213,7 +236,7 @@ class LottieView internal constructor(
     }
 
     private fun convertColor(value: String): Int {
-        val alpha = value.substring(2,4).toInt(16)
+        val alpha = value.substring(2, 4).toInt(16)
         val red = value.substring(4, 6).toInt(16)
         val green = value.substring(6, 8).toInt(16)
         val blue = value.substring(8, 10).toInt(16)

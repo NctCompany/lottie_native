@@ -8,12 +8,12 @@ class LottieController {
   late int id;
   late MethodChannel _channel;
   late EventChannel _playFinished;
+  Stream<bool>? _finishStateStream;
 
   LottieController(int id) {
     this.id = id;
     _channel = new MethodChannel('de.lotum/lottie_native_$id');
-    _playFinished =
-        EventChannel('de.lotum/lottie_native_stream_play_finished_$id');
+    _playFinished = EventChannel('de.lotum/lottie_native_stream_play_finished_$id');
   }
 
   Future<void> setLoopAnimation(bool loop) async {
@@ -21,8 +21,7 @@ class LottieController {
   }
 
   Future<void> setAutoReverseAnimation(bool reverse) async {
-    return _channel
-        .invokeMethod('setAutoReverseAnimation', {"reverse": reverse});
+    return _channel.invokeMethod('setAutoReverseAnimation', {"reverse": reverse});
   }
 
   Future<void> play() async {
@@ -59,13 +58,11 @@ class LottieController {
   }
 
   Future<void> setAnimationSpeed(double speed) async {
-    return _channel
-        .invokeMethod('setAnimationSpeed', {"speed": speed.clamp(0.0, 1.0)});
+    return _channel.invokeMethod('setAnimationSpeed', {"speed": speed.clamp(0.0, 1.0)});
   }
 
   Future<void> setAnimationProgress(double progress) async {
-    return _channel.invokeMethod(
-        'setAnimationProgress', {"progress": progress.clamp(0.0, 1.0)});
+    return _channel.invokeMethod('setAnimationProgress', {"progress": progress.clamp(0.0, 1.0)});
   }
 
   Future<void> setProgressWithFrame(int frame) async {
@@ -108,8 +105,11 @@ class LottieController {
   }
 
   Stream<bool> get onPlayFinished {
-    var animationFinished =
-        _playFinished.receiveBroadcastStream().map<bool>((element) => element);
-    return animationFinished;
+    var stream = _finishStateStream;
+    if (stream == null) {
+      stream = _playFinished.receiveBroadcastStream().map<bool>((element) => element);
+      _finishStateStream = stream;
+    }
+    return stream;
   }
 }
